@@ -17,10 +17,30 @@ jobs:
         run: |
           sudo xcode-select -s /Applications/Xcode_15.4.app/Contents/Developer
 
-      - name: Fetch Prebuilt Sysroot
+      - name: Install Build Tools
         run: |
-          curl -L -o sysroot.zip https://github.com/utmapp/UTM/releases/download/v4.5.3/sysroot-ios-arm64.zip
-          unzip -q sysroot.zip
+          brew install bison pkg-config nasm ninja meson
+          echo "$(brew --prefix bison)/bin" >> $GITHUB_PATH
+          pip3 install --break-system-packages setuptools pyparsing six distlib wheel packaging pyyaml mako jinja2
+
+      - name: Patch and Build Dependencies
+        run: |
+          # Modificar el script para parchar virglrenderer apenas se descargue
+          python3 -c '
+          with open("scripts/build_dependencies.sh", "r") as f:
+              content = f.read()
+          # Insertar correccion de sintaxis C en vrend_renderer.c
+          patch_cmd = """
+          if [ -f "$BUILD_DIR/virglrenderer.git/src/vrend/vrend_renderer.c" ]; then
+              sed -i "" "s/char \*llvmpipe_string = strstr/{ char *llvmpipe_string = strstr/" "$BUILD_DIR/virglrenderer.git/src/vrend/vrend_renderer.c"
+              sed -i "" "s/memcpy(llvmpipe_string, \"LLVMPIPE\", 8);/memcpy(llvmpipe_string, \"LLVMPIPE\", 8); }/" "$BUILD_DIR/virglrenderer.git/src/vrend/vrend_renderer.c"
+          fi
+          """
+          content = content.replace("build_virglrenderer() {", "build_virglrenderer() {\n" + patch_cmd)
+          with open("scripts/build_dependencies.sh", "w") as f:
+              f.write(content)
+          '
+          ./scripts/build_dependencies.sh -p ios -a arm64
 
       - name: Build UTM (.ipa)
         run: |
