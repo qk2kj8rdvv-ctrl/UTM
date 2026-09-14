@@ -19,7 +19,7 @@ jobs:
       - name: Install Python & Tools
         run: |
           brew install bison pkg-config glib-utils nasm meson
-          python3 -m pip install --break-system-packages six pyparsing mako pyyaml || pip3 install six pyparsing mako pyyaml
+          python3 -m pip install --break-system-packages setuptools six pyparsing mako pyyaml
 
       - name: Build Dependencies (Sysroot iOS)
         run: |
