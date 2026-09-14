@@ -23,12 +23,22 @@ jobs:
           python3 -m pip install --break-system-packages setuptools six pyparsing mako pyyaml distlib
 
       - name: Fetch Prebuilt Sysroot
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           mkdir -p sysroot-ios-arm64
-          curl -L -f -o sysroot.tgz https://github.com/utmapp/UTM/releases/download/v4.5.3/sysroot-ios-arm64.tgz || \
-          curl -L -f -o sysroot.tgz https://github.com/utmapp/UTM/releases/download/v4.5.0/sysroot-ios-arm64.tgz
-          tar -xzf sysroot.tgz -C sysroot-ios-arm64
-
+          # Descarga el asset oficial del repositorio de dependencias de UTM
+          gh release download --repo utmapp/UTM-dependencies -p "*ios-arm64*" --dir . || \
+          gh release download --repo utmapp/UTM-dependencies -p "*ios*" --dir .
+          
+          # Extraer el archivo descargado
+          ARCHIVE=$(ls *.tgz *.tar.gz *.zip 2>/dev/null | head -n 1)
+          if [[ "$ARCHIVE" == *.tar.gz ]] || [[ "$ARCHIVE" == *.tgz ]]; then
+            tar -xzf "$ARCHIVE" -C sysroot-ios-arm64
+          elif [[ "$ARCHIVE" == *.zip ]]; then
+            unzip -q "$ARCHIVE" -d sysroot-ios-arm64
+          fi
+          ls -la sysroot-ios-arm64
       - name: Build UTM (.ipa)
         run: |
           xcodebuild archive \
