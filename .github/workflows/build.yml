@@ -4,14 +4,27 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-ios:
-    name: Build UTM iOS IPA
-    runs-on: macos-14
+  build:
+    runs-on: macos-13
     steps:
       - name: Checkout UTM
         uses: actions/checkout@v4
         with:
           submodules: recursive
+
+      - name: Select Xcode 14.3.1
+        run: |
+          sudo xcode-select -s /Applications/Xcode_14.3.1.app/Contents/Developer
+
+      - name: Install Build Tools
+        run: |
+          brew install bison pkg-config nasm
+          echo "$(brew --prefix bison)/bin" >> $GITHUB_PATH
+          pip3 install six distlib
+
+      - name: Build Dependencies
+        run: |
+          ./scripts/build_dependencies.sh -p ios -a arm64
 
       - name: Setup Xcode
         run: sudo xcode-select -s /Applications/Xcode_15.4.app
