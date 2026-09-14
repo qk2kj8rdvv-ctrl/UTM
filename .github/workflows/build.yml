@@ -16,16 +16,11 @@ jobs:
       - name: Setup Xcode
         run: sudo xcode-select -s /Applications/Xcode_15.4.app
 
-      - name: Install Python & Tools
+      - name: Download Official Prebuilt Sysroot
         run: |
-          brew install bison pkg-config glib-utils nasm meson
-          echo "/opt/homebrew/opt/bison/bin:/usr/local/opt/bison/bin" >> $GITHUB_PATH
-          python3 -m pip install --break-system-packages setuptools six pyparsing mako pyyaml distlib
-
-      - name: Build Dependencies (Sysroot iOS)
-        run: |
-          export PATH="/opt/homebrew/opt/bison/bin:/usr/local/opt/bison/bin:$PATH"
-          ./scripts/build_dependencies.sh -p ios -a arm64
+          mkdir -p sysroot-ios-arm64
+          curl -L -o sysroot.tgz https://github.com/utmapp/UTM/releases/download/v4.5.3/sysroot-ios-arm64.tgz
+          tar -xzf sysroot.tgz -C sysroot-ios-arm64
 
       - name: Build UTM (.ipa)
         run: |
@@ -43,10 +38,10 @@ jobs:
           mkdir -p build/Payload
           cp -r build/UTM.xcarchive/Products/Applications/UTM.app build/Payload/
           cd build
-          zip -r UTM-Android.ipa Payload
+          zip -r UTM-iOS.ipa Payload
 
       - name: Upload IPA Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: UTM-Android-IPA
-          path: build/UTM-Android.ipa
+          name: UTM-iOS-IPA
+          path: build/UTM-iOS.ipa
