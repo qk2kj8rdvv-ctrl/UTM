@@ -25,21 +25,21 @@ jobs:
 
       - name: Patch and Build Dependencies
         run: |
-          # Modificar el script para parchar virglrenderer apenas se descargue
-          python3 -c '
-          with open("scripts/build_dependencies.sh", "r") as f:
-              content = f.read()
-          # Insertar correccion de sintaxis C en vrend_renderer.c
-          patch_cmd = """
-          if [ -f "$BUILD_DIR/virglrenderer.git/src/vrend/vrend_renderer.c" ]; then
-              sed -i "" "s/char \*llvmpipe_string = strstr/{ char *llvmpipe_string = strstr/" "$BUILD_DIR/virglrenderer.git/src/vrend/vrend_renderer.c"
-              sed -i "" "s/memcpy(llvmpipe_string, \"LLVMPIPE\", 8);/memcpy(llvmpipe_string, \"LLVMPIPE\", 8); }/" "$BUILD_DIR/virglrenderer.git/src/vrend/vrend_renderer.c"
-          fi
-          """
-          content = content.replace("build_virglrenderer() {", "build_virglrenderer() {\n" + patch_cmd)
-          with open("scripts/build_dependencies.sh", "w") as f:
-              f.write(content)
-          '
+          # 1. Ejecutar un monitor en segundo plano que espera a que el código
+          #    se descargue y le aplica el parche antes de compilarlo.
+          (
+            while true; do
+              if [ -f "build-iOS-arm64/virglrenderer.git/src/vrend/vrend_renderer.c" ]; then
+                sleep 3
+                sed -i '' 's/char \*llvmpipe_string = strstr(caps->v2.renderer, "llvmpipe");/{ char *llvmpipe_string = strstr(caps->v2.renderer, "llvmpipe");/g' build-iOS-arm64/virglrenderer.git/src/vrend/vrend_renderer.c
+                sed -i '' 's/memcpy(llvmpipe_string, "LLVMPIPE", 8);/memcpy(llvmpipe_string, "LLVMPIPE", 8); }/g' build-iOS-arm64/virglrenderer.git/src/vrend/vrend_renderer.c
+                break
+              fi
+              sleep 3
+            done
+          ) &
+
+          # 2. Iniciar la compilación (el monitor de arriba lo parchará en vuelo)
           ./scripts/build_dependencies.sh -p ios -a arm64
 
       - name: Build UTM (.ipa)
