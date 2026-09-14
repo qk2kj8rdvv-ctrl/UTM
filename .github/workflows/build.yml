@@ -11,66 +11,33 @@ jobs:
         uses: actions/checkout@v4
         with:
           submodules: recursive
+          fetch-depth: 1
 
       - name: Select Xcode
         run: |
           sudo xcode-select -s /Applications/Xcode_15.4.app/Contents/Developer
 
-      - name: Install Build Tools
-        run: |
-          brew install bison pkg-config nasm ninja meson
-          echo "$(brew --prefix bison)/bin" >> $GITHUB_PATH
-          pip3 install --break-system-packages setuptools pyparsing six distlib wheel packaging pyyaml mako jinja2
-      - name: Build Dependencies
-        run: |
-          ./scripts/build_dependencies.sh -p ios -a arm64
-
-      - name: Setup Xcode
-        run: sudo xcode-select -s /Applications/Xcode_15.4.app
-
-      - name: Install Tools & Python Packages
-        run: |
-          brew install bison pkg-config glib-utils nasm meson
-          echo "/opt/homebrew/opt/bison/bin:/usr/local/opt/bison/bin" >> $GITHUB_PATH
-          python3 -m pip install --break-system-packages setuptools six pyparsing mako pyyaml distlib
-
       - name: Fetch Prebuilt Sysroot
-        env:
-          GH_TOKEN: ${{ github.token }}
         run: |
-          mkdir -p sysroot-ios-arm64
-          # Descarga el asset oficial del repositorio de dependencias de UTM
-          gh release download --repo utmapp/UTM-dependencies -p "*ios-arm64*" --dir . || \
-          gh release download --repo utmapp/UTM-dependencies -p "*ios*" --dir .
-          
-          # Extraer el archivo descargado
-          ARCHIVE=$(ls *.tgz *.tar.gz *.zip 2>/dev/null | head -n 1)
-          if [[ "$ARCHIVE" == *.tar.gz ]] || [[ "$ARCHIVE" == *.tgz ]]; then
-            tar -xzf "$ARCHIVE" -C sysroot-ios-arm64
-          elif [[ "$ARCHIVE" == *.zip ]]; then
-            unzip -q "$ARCHIVE" -d sysroot-ios-arm64
-          fi
-          ls -la sysroot-ios-arm64
+          curl -L -o sysroot.zip https://github.com/utmapp/UTM/releases/download/v4.5.3/sysroot-ios-arm64.zip
+          unzip -q sysroot.zip
+
       - name: Build UTM (.ipa)
         run: |
           xcodebuild archive \
             -workspace UTM.xcworkspace \
-            -scheme UTM \
+            -scheme "UTM (iOS)" \
             -configuration Release \
-            -sdk iphoneos \
+            -destination "generic/platform=iOS" \
             -archivePath build/UTM.xcarchive \
-            CODE_SIGNING_ALLOWED=NO \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGN_IDENTITY="" \
-            AD_HOC_CODE_SIGNING_ALLOWED=YES
+            CODE_SIGNING_ALLOWED=NO
 
-          mkdir -p build/Payload
-          cp -r build/UTM.xcarchive/Products/Applications/UTM.app build/Payload/
-          cd build
-          zip -r UTM-iOS.ipa Payload
+          mkdir -p Payload
+          cp -r build/UTM.xcarchive/Products/Applications/UTM.app Payload/
+          zip -r UTM.ipa Payload
 
       - name: Upload IPA Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: UTM-iOS-IPA
-          path: build/UTM-iOS.ipa
+          name: UTM-Custom
+          path: UTM.ipa
