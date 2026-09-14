@@ -25,21 +25,23 @@ jobs:
 
       - name: Patch and Build Dependencies
         run: |
-          # 1. Ejecutar un monitor en segundo plano que espera a que el código
-          #    se descargue y le aplica el parche antes de compilarlo.
+          # 1. Desactivar Hypervisor (Incompatible con iOS 17 SDK y no se usa en iPhone)
+          sed -i '' 's/build_hypervisor/#build_hypervisor/g' scripts/build_dependencies.sh
+
+          # 2. Mantener el parche en segundo plano para virglrenderer
           (
             while true; do
               if [ -f "build-iOS-arm64/virglrenderer.git/src/vrend/vrend_renderer.c" ]; then
-                sleep 3
+                sleep 2
                 sed -i '' 's/char \*llvmpipe_string = strstr(caps->v2.renderer, "llvmpipe");/{ char *llvmpipe_string = strstr(caps->v2.renderer, "llvmpipe");/g' build-iOS-arm64/virglrenderer.git/src/vrend/vrend_renderer.c
                 sed -i '' 's/memcpy(llvmpipe_string, "LLVMPIPE", 8);/memcpy(llvmpipe_string, "LLVMPIPE", 8); }/g' build-iOS-arm64/virglrenderer.git/src/vrend/vrend_renderer.c
                 break
               fi
-              sleep 3
+              sleep 2
             done
           ) &
 
-          # 2. Iniciar la compilación (el monitor de arriba lo parchará en vuelo)
+          # 3. Iniciar compilación
           ./scripts/build_dependencies.sh -p ios -a arm64
 
       - name: Build UTM (.ipa)
