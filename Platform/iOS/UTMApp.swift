@@ -38,9 +38,41 @@ struct UTMApp: App {
 
     var body: some Scene {
         WindowGroup {
-            UTMSingleWindowView(data: data)
+    AndroidBootView()
+}
         }.commands {
             VMCommands()
+        }
+    }
+}
+struct AndroidBootView: View {
+    @EnvironmentObject var data: UTMData
+    @State private var isStarting: Bool = true
+    
+    var body: some View {
+        VStack(spacing: 20) {
+            if isStarting {
+                ProgressView()
+                    .scaleEffect(1.5)
+                Text("Starting Android...")
+                    .font(.title2)
+                    .fontWeight(.medium)
+                Text("Android is running in the background.")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+            }
+            
+            Button("Show Android") {
+                if let vm = data.virtualMachines.first(where: { $0.detailsTitleUI == "Android" }) {
+                    data.show(vm: vm)
+                }
+            }
+            .buttonStyle(.borderedProminent)
+        }
+        .onAppear {
+            if let vm = data.virtualMachines.first(where: { $0.detailsTitleUI == "Android" }) {
+                data.vmStart(vm: vm)
+            }
         }
     }
 }
