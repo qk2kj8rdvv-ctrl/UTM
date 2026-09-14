@@ -18,9 +18,7 @@ jobs:
 
       - name: Download Official Prebuilt Sysroot
         run: |
-          mkdir -p sysroot-ios-arm64
-          curl -L -o sysroot.tgz https://github.com/utmapp/UTM/releases/download/v4.5.3/sysroot-ios-arm64.tgz
-          tar -xzf sysroot.tgz -C sysroot-ios-arm64
+          ./scripts/build_dependencies.sh -p ios -a arm64 -d
 
       - name: Build UTM (.ipa)
         run: |
