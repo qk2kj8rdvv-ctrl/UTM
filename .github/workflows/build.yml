@@ -19,19 +19,23 @@ jobs:
 
       - name: Install Build Tools
         run: |
-          brew install bison pkg-config nasm ninja meson
+          brew install bison pkg-config nasm ninja meson libclc
           echo "$(brew --prefix bison)/bin" >> $GITHUB_PATH
           pip3 install --break-system-packages setuptools pyparsing six distlib wheel packaging pyyaml mako jinja2
 
       - name: Patch and Build Dependencies
+        env:
+          GCC_TREAT_WARNINGS_AS_ERRORS: "NO"
+          CFLAGS: "-Wno-error"
+          CXXFLAGS: "-Wno-error"
         run: |
-          # 1. Desactivar Hypervisor (Incompatible con iOS 17 SDK y no se usa en iPhone)
+          # 1. Desactivar Hypervisor
           awk '/build_hypervisor.*\{/{print; print "  return 0;"; next} 1' scripts/build_dependencies.sh > tmp.sh
           mv tmp.sh scripts/build_dependencies.sh
           chmod +x scripts/build_dependencies.sh
 
-          # 2. Desactivar warnings como errores en WebKit/ANGLE para que no crashee con Xcode 15
-          sed -i '' 's/CODE_SIGNING_ALLOWED=NO/CODE_SIGNING_ALLOWED=NO GCC_TREAT_WARNINGS_AS_ERRORS=NO/g' scripts/build_dependencies.sh
+          # 2. Inyectar regla a la fuerza en todo el script
+          sed -i '' 's/xcodebuild/xcodebuild GCC_TREAT_WARNINGS_AS_ERRORS=NO/g' scripts/build_dependencies.sh
 
           # 3. Mantener el parche en segundo plano para virglrenderer
           (
